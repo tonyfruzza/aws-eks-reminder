@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   name: bb-demo
+   namespace: default
+spec:
+   replicas: 2
+   selector:
+      matchLabels:
+         bb: web
+   template:
+      metadata:
+         labels:
+            bb: web
+      spec:
+         containers:
+            - name: bb-site
+              image: 537068705061.dkr.ecr.us-east-2.amazonaws.com/getting-started:latest
+              imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+   name: bb-entrypoint
+   namespace: default
+   annotations:
+      service.beta.kubernetes.io/aws-load-balancer-security-groups: sg-09d1e80e13c91878a
+spec:
+   type: LoadBalancer
+   selector:
+      bb: web
+   ports:
+      - port: 3000
+        targetPort: 3000
+        nodePort: 30001
+---

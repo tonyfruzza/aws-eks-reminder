@@ -1,0 +1,66 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task --list-all
+  init:infra:
+    dir: terraform
+    cmds:
+      - terraform init
+  deploy:infra:
+    deps: [init:infra]
+    dir: terraform
+    interactive: true
+    cmds:
+      - terraform apply
+  ecr:login:
+    cmds:
+      - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 537068705061.dkr.ecr.us-east-2.amazonaws.com
+  eks:login:
+    cmds:
+      - aws eks --region us-east-2 update-kubeconfig --name ex-terraform
+      - kubectl config current-context
+  eks:apply:
+    cmds:
+      - kubectl apply -f bb.yaml
+  eks:get:nodes:
+    cmds:
+      - kubectl get nodes
+  eks:get:services:
+    cmds:
+      - kubectl get services
+  eks:get:pods:
+    cmds:
+      - kubectl get pods {{.ARGS}}
+  eks:get:pods:app:
+    cmds:
+      - kubectl get pods -l bb=web
+  eks:get:deployments:
+    cmds:
+      - kubectl get deployments
+  # Example of getting a specific deployment
+  eks:get:deployments:app:
+    cmds:
+      - kubectl get deployments/getting-started
+  eks:describe:deployment:
+    cmds:
+      - kubectl describe deployments/getting-started
+  eks:delete:pods:
+    cmds:
+      - kubectl delete pods {{.ARGS}}
+  eks:delete:pods:app:
+    cmds:
+      - task: eks:delete:pods
+        vars:
+          ARGS: --selector bb=web
+  build:
+    dir: getting-started-app
+    cmds:
+      - mkdir -p additional-ca-certs
+      - security find-certificate -a -c "Netskope" -p > additional-ca-certs/netskope.crt
+      - docker build --platform linux/amd64 -t getting-started .
+      - docker tag getting-started:latest 537068705061.dkr.ecr.us-east-2.amazonaws.com/getting-started:latest
+  deploy:image:
+    cmds:
+      - docker push 537068705061.dkr.ecr.us-east-2.amazonaws.com/getting-started:latest
